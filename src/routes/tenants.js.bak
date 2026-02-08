@@ -1,0 +1,42 @@
+import express from "express";
+import { PrismaClient } from "@prisma/client";
+import authenticate from "../middleware/authenticate.js";
+
+const router = express.Router();
+const prisma = new PrismaClient();
+
+// ✅ Get all tenants (protected)
+router.get("/", authenticate, async (req, res) => {
+  try {
+    const tenants = await prisma.tenant.findMany({
+      include: { propertyManager: true },
+    });
+    res.json(tenants);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch tenants", details: error.message });
+  }
+});
+
+// ✅ Register a new tenant (protected)
+router.post("/register", authenticate, async (req, res) => {
+  try {
+    const { name, email, phone, unitNumber, rentAmount, propertyManagerId } = req.body;
+
+    const newTenant = await prisma.tenant.create({
+      data: {
+        name,
+        email,
+        phone,
+        unitNumber,
+        rentAmount: rentAmount ? parseFloat(rentAmount) : null,
+        propertyManagerId: propertyManagerId ? parseInt(propertyManagerId) : null,
+      },
+    });
+
+    res.json({ message: "Tenant registered successfully", tenant: newTenant });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to register tenant", details: error.message });
+  }
+});
+
+export default router;

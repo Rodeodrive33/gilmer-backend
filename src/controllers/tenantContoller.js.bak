@@ -1,0 +1,48 @@
+const prisma = require('../../prismaClient');
+
+exports.registerTenant = async (req, res) => {
+  try {
+    const { name, phone, email } = req.body;
+
+    // Create user with role TENANT
+    const user = await prisma.user.create({
+      data: {
+        name,
+        phone,
+        email,
+        role: 'TENANT'
+      }
+    });
+
+    res.status(201).json({ message: 'Tenant created', user });
+  } catch (err) {
+    console.error('Tenant create error', err);
+    res.status(500).json({ error: 'Failed to create tenant' });
+  }
+};
+
+exports.getAllTenants = async (req, res) => {
+  try {
+    const tenants = await prisma.user.findMany({
+      where: { role: 'TENANT' },
+      select: { id: true, name: true, email: true, phone: true, createdAt: true }
+    });
+    res.json(tenants);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch tenants' });
+  }
+};
+
+exports.getTenantById = async (req, res) => {
+  try {
+    const tenant = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, name: true, email: true, phone: true, createdAt: true }
+    });
+    res.json(tenant);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch tenant' });
+  }
+};

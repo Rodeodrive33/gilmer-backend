@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  CLIENT
+  MANAGER
+  TENANT
+}
+
+model User {
+  id    String  @id @default(uuid())
+  email String  @unique
+  name  String?
+  role  Role
+
+  // CLIENT owns properties
+  ownedProperties Property[] @relation("ClientProperties")
+
+  // MANAGER manages properties
+  managedProperties Property[] @relation("ManagerProperties")
+
+  // TENANT leases
+  leases Lease[] @relation("TenantLeases")
+
+  // Accounting
+  ledgerEntries LedgerEntry[]
+  subscriptions Subscription[]
+  auditLogs     AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Property {
+  id       String @id @default(uuid())
+  name     String
+  location String
+
+  clientId  String
+  managerId String?
+
+  client  User  @relation("ClientProperties", fields: [clientId], references: [id])
+  manager User? @relation("ManagerProperties", fields: [managerId], references: [id])
+
+  leases Lease[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Lease {
+  id        String    @id @default(uuid())
+  startDate DateTime
+  endDate   DateTime?
+
+  tenantId   String
+  propertyId String
+
+  tenant   User     @relation("TenantLeases", fields: [tenantId], references: [id])
+  property Property @relation(fields: [propertyId], references: [id])
+
+  payments Payment[]
+  invoices Invoice[]
+
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id      String   @id @default(uuid())
+  amount  Float
+  channel String
+  paidAt  DateTime @default(now())
+
+  leaseId String
+  lease   Lease  @relation(fields: [leaseId], references: [id])
+
+  ledgerEntries LedgerEntry[]
+}
+
+model Invoice {
+  id      String   @id @default(uuid())
+  amount  Float
+  dueDate DateTime
+  status  String
+
+  leaseId String
+  lease   Lease  @relation(fields: [leaseId], references: [id])
+
+  taxRecords    TaxRecord[]
+  ledgerEntries LedgerEntry[]
+
+  createdAt DateTime @default(now())
+}
+
+model TaxRecord {
+  id        String  @id @default(uuid())
+  invoiceId String
+  rate      Float
+  amount    Float
+  etimsRef  String?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model LedgerEntry {
+  id          String @id @default(uuid())
+  type        String // DEBIT or CREDIT
+  amount      Float
+  description String
+
+  clientId String
+  client   User   @relation(fields: [clientId], references: [id])
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id])
+
+  paymentId String?
+  payment   Payment? @relation(fields: [paymentId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String?
+  timestamp DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Subscription {
+  id       String @id @default(uuid())
+  clientId String
+  client   User   @relation(fields: [clientId], references: [id])
+
+  plan      String
+  price     Float
+  status    String
+  startDate DateTime @default(now())
+  endDate   DateTime
+}
