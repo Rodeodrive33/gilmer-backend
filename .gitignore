@@ -1,5 +1,9 @@
-# Ignore environment variables
+# Ignore local environment files
 .env
 
-# Ignore node modules
+# Ignore node_modules
 node_modules
+
+# Ignore Prisma temporary files
+prisma/migrations
+prisma/.temp
