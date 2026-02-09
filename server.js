@@ -1,3 +1,5 @@
+import "dotenv/config"; // loads .env
+
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
@@ -5,6 +7,7 @@ import dashboardRoutes from "./src/routes/dashboard.js";
 import mpesaRoutes from "./src/routes/mpesa.js";
 import cron from "node-cron";
 import { batchInvoices } from "./src/services/invoiceBatchService.js";
+
 
 cron.schedule("0 0 * * *", batchInvoices);
 
@@ -53,9 +56,10 @@ io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 });
 
-server.listen(3000, () => {
-  console.log("Server running on port 3000");
-});
+const PORT = process.env.PORT || 3000;
 
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
 
